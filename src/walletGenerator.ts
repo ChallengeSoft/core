@@ -1,6 +1,7 @@
 import { Chains } from './chains';
 import { CONFIG } from './utils/config';
-import { generateMnemonic } from 'bip39';
+import { entropyToMnemonic, generateMnemonic, validateMnemonic } from 'bip39';
+
 import {
   BitcoinGenerator,
   BscGenerator,
@@ -33,8 +34,16 @@ export class WalletGenerator {
    * @return {string} The mnemonic
    * @memberof WalletGenerator
    */
-  static generateMnemonic(size = 128): string {
+  static generateMnem(size = 128): string {
     return generateMnemonic(size);
+  }
+
+  static entropyToMnem(entropy: string): string {
+    return entropyToMnemonic(entropy);
+  }
+
+  static validateMnem(mnemonic: string): boolean {
+    return validateMnemonic(mnemonic)
   }
 
   /**

@@ -1,9 +1,9 @@
 {
-  "name": "@coingrig/core",
+  "name": "@challengesoft/coingrig-core",
   "title": "The Coingrig Core library",
   "description": "The Coingrig Core library handling the crypto wallet interactions",
   "author": "Coingrig",
-  "version": "1.3.2",
+  "version": "1.3.10",
   "license": "MIT",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
@@ -98,5 +98,11 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "testTimeout": 30000
+  },
+  "bugs": {
+    "url": "https://github.com/coingrig/core/issues"
+  },
+  "directories": {
+    "test": "test"
   }
 }
