@@ -5,7 +5,7 @@ let mnemonic = MNEMONIC;
 
 describe('WalletGenerator', () => {
   it('can_generate_mnemonic', async () => {
-    let mnemonic = await WalletGenerator.generateMnemonic();
+    let mnemonic = await WalletGenerator.generateMnem();
     expect(typeof mnemonic).toBe('string');
   });
 

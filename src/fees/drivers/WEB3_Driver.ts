@@ -1,10 +1,10 @@
-import { IFeeMap, FEE_TYPES } from '../IFee';
-import { GenericDriver } from '../GenericDriver';
-import { EthereumFee } from '../types/EthereumFee';
-import { TransactionConfig } from 'web3-core';
+import {IFeeMap, FEE_TYPES} from '../IFee';
+import {GenericDriver} from '../GenericDriver';
+import {EthereumFee} from '../types/EthereumFee';
+import {TransactionConfig} from 'web3-core';
 import Web3 from 'web3';
 import BigNumber from 'bignumber.js';
-import { TRANSFER_METHOD_ABI } from '../../constants';
+import {TRANSFER_METHOD_ABI} from '../../constants';
 
 export class WEB3_Driver extends GenericDriver {
   nativeAssetSymbol: string = 'ETH';
@@ -38,7 +38,11 @@ export class WEB3_Driver extends GenericDriver {
       },
       fromPrivateKey: privateKey,
     };
+
     let proposal = await this.buildProposal(body);
+    if (proposal.error) {
+      return proposal
+    }
 
     fees[FEE_TYPES.REGULAR] = this.buildFee(proposal);
 
@@ -54,6 +58,9 @@ export class WEB3_Driver extends GenericDriver {
     };
 
     proposal = await this.buildProposal(body);
+    if (proposal.error) {
+      return proposal
+    }
 
     fees[FEE_TYPES.PRIORITY] = this.buildFee(proposal);
 
@@ -114,14 +121,26 @@ export class WEB3_Driver extends GenericDriver {
     }
 
     const gasPrice = client.utils.toWei(fee.gasPrice, 'gwei');
-    tx = {
-      ...tx,
-      gasPrice,
-    };
+    if (fee.gasLimit) {
+      tx = {
+        ...tx,
+        gasPrice: gasPrice ?? await client.eth.getGasPrice(),
+      };
+    }
+
+    console.log('tx', tx)
 
     if (!signatureId) {
-      tx.gas = fee?.gasLimit ?? (await client.eth.estimateGas(tx));
+      try {
+        tx.gas = fee?.gasLimit ?? (await client.eth.estimateGas(tx));
+      } catch (e: any) {
+        console.log('ERROR', e)
+        return {
+          error: e.message.match(/([^:]+$)/)[0]
+        }
+      }
     }
+
 
     return {
       signatureId: signatureId,
