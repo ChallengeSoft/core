@@ -40,8 +40,8 @@ export class WEB3_Driver extends GenericDriver {
     };
 
     let proposal = await this.buildProposal(body);
-    if (proposal.error) {
-      return proposal
+    if (proposal && proposal.error) {
+      return proposal;
     }
 
     fees[FEE_TYPES.REGULAR] = this.buildFee(proposal);
@@ -58,8 +58,8 @@ export class WEB3_Driver extends GenericDriver {
     };
 
     proposal = await this.buildProposal(body);
-    if (proposal.error) {
-      return proposal
+    if (proposal && proposal.error) {
+      return proposal;
     }
 
     fees[FEE_TYPES.PRIORITY] = this.buildFee(proposal);
@@ -79,44 +79,46 @@ export class WEB3_Driver extends GenericDriver {
       currency,
       fee,
       data,
-      nonce,
       signatureId,
     } = body;
 
     const client = new Web3(provider);
     client.eth.accounts.wallet.add(fromPrivateKey);
     client.eth.defaultAccount = client.eth.accounts.wallet[0].address;
+    const senderWallet = client.eth.accounts.wallet[0].address
 
     let tx: TransactionConfig;
     if (currency === this.nativeAssetSymbol) {
       tx = {
         from: 0,
-        to: to.trim(),
-        value: client.utils.toWei(`${amount}`, 'ether'),
+        to: client.utils.toHex(to.trim()),
+        value: client.utils.toHex(client.utils.toWei(`${amount}`, 'ether')),
         data: data
           ? client.utils.isHex(data)
-            ? client.utils.stringToHex(data)
-            : client.utils.toHex(data)
+              ? client.utils.stringToHex(data)
+              : client.utils.toHex(data)
           : undefined,
-        nonce,
+        // @ts-ignore
+        nonce: client.utils.toHex(await client.eth.getTransactionCount(senderWallet)),
       };
     } else {
       const contract = new client.eth.Contract(
-        // @ts-ignore
-        [TRANSFER_METHOD_ABI],
-        this.assetConfig.contract
+          // @ts-ignore
+          [TRANSFER_METHOD_ABI],
+          this.assetConfig.contract
       );
       const digits = new BigNumber(10).pow(this.assetConfig.decimals!);
       tx = {
         from: 0,
-        to: this.assetConfig.contract!,
+        to: client.utils.toHex(this.assetConfig.contract!),
         data: contract.methods
           .transfer(
-            to.trim(),
-            `0x${new BigNumber(amount).multipliedBy(digits).toString(16)}`
+              to.trim(),
+              `0x${new BigNumber(amount).multipliedBy(digits).toString(16)}`
           )
           .encodeABI(),
-        nonce,
+        // @ts-ignore
+        nonce: client.utils.toHex(await client.eth.getTransactionCount(senderWallet)),
       };
     }
 
@@ -128,14 +130,13 @@ export class WEB3_Driver extends GenericDriver {
       };
     }
 
-    console.log('tx', tx)
-
     if (!signatureId) {
       try {
         tx.gas = fee?.gasLimit ?? (await client.eth.estimateGas(tx));
-      } catch (e: any) {
-        console.log('ERROR', e)
+      } catch (e) {
+        console.log('ERROR', e);
         return {
+          // @ts-ignore
           error: e.message.match(/([^:]+$)/)[0]
         }
       }

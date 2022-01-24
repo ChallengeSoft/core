@@ -1,4 +1,6 @@
 import Web3 from 'web3';
+import { Transaction } from '@ethereumjs/tx';
+import Common, { CustomChain } from '@ethereumjs/common';
 import { GenericTxProposal } from '../../fees/GenericTxProposal';
 import { GenericTransactionDriver } from '../GenericTransactionDriver';
 
@@ -6,7 +8,7 @@ export class WEB3_Driver extends GenericTransactionDriver {
   send = async (transaction: GenericTxProposal): Promise<any> => {
     const data: any = transaction.getData();
     let txRaw = await this.prepareSignedTransaction(data);
-    return this.sendRaw(txRaw);
+    return this.sendRaw('0x' + txRaw);
   };
 
   sendRaw = async (transaction: any): Promise<any> => {
@@ -17,17 +19,19 @@ export class WEB3_Driver extends GenericTransactionDriver {
       client.eth
         .sendSignedTransaction(transaction)
         .on('transactionHash', function(hash) {
-          resolve(hash);
+          console.log('transactionHash', hash);
+          // resolve(hash);
         })
-        .on('receipt', function(_receipt) {
-          // resolve(receipt.transactionHash);
-        })
-        // Fired for every confirmation up to the 12th confirmation.
-        // .on('confirmation', function(_confirmationNumber, _receipt){
-        //   console.log('_confirmationNumber', _confirmationNumber)
-        //   resolve(_receipt);
+        // .on('confirmation', function(confNumber, receipt){
+        //   console.log("confNumber",confNumber,"receipt",receipt)
         // })
+        .on('receipt', function(_receipt) {
+          console.log('receipt', _receipt);
+          resolve(_receipt.transactionHash);
+        })
+
         .on('error', function(error) {
+          console.log('Error', error)
           reject(error);
         });
     });
@@ -46,12 +50,17 @@ export class WEB3_Driver extends GenericTransactionDriver {
     if (data.signatureId) {
       txRaw = data.proposal;
     } else {
-      txRaw = (
-        await client.eth.accounts.signTransaction(
-          data.proposal,
-          fromPrivateKey as string
-        )
-      ).rawTransaction as string;
+      if (!data.proposal.gasPrice) {
+        data.proposal.gasPrice = +await client.eth.getGasPrice();
+      }
+      if (!data.proposal.nonce) {
+        delete data.proposal.nonce;
+      }
+      data.proposal.gasLimit = data.proposal.gas + 50000;
+      const common = Common.custom(CustomChain.PolygonMainnet);
+      const tx = await Transaction.fromTxData(data.proposal, { common });
+      const transaction = await tx.sign(Buffer.from(fromPrivateKey.replace('0x', ''), 'hex'));
+      txRaw = transaction.serialize().toString('hex');
     }
 
     return txRaw;
